@@ -2,10 +2,62 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14432f">
+<meta name="robots" content="noindex">
 <title>Quick Expense</title>
 <link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js" defer></script>
 </head>
 <body>
-<script src="/static/app.js"></script>
+<header class="masthead">
+  <h1>Quick Expense</h1>
+  <p>Adds one expense to your GnuCash book.</p>
+</header>
+
+<main>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+  <form id="sign-in" class="panel" autocomplete="on">
+    <h2>Sign in to the database</h2>
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button id="sign-in-button" type="submit">Sign in</button>
+  </form>
+
+  <form id="expense" class="panel" autocomplete="off" novalidate>
+    <fieldset id="expense-fields" disabled>
+      <label for="amount">Amount</label>
+      <div class="amount">
+        <input id="amount" name="amount" type="text" inputmode="decimal" placeholder="0" required>
+        <span id="amount-currency" class="currency" aria-live="polite"></span>
+      </div>
+
+      <label for="from">From</label>
+      <select id="from" name="from" required></select>
+
+      <label for="to">To</label>
+      <div class="combobox">
+        <input id="to" name="to" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-options" autocapitalize="none" spellcheck="false" required>
+        <ul id="to-options" role="listbox" aria-label="Expense accounts" hidden></ul>
+      </div>
+
+      <div id="conversion" hidden>
+        <label for="to-amount">Amount in <span id="to-currency"></span></label>
+        <input id="to-amount" name="to_amount" type="text" inputmode="decimal">
+        <p id="rate-note" class="note" aria-live="polite"></p>
+      </div>
+
+      <label for="date">Date</label>
+      <input id="date" name="date" type="date" required>
+
+      <label for="description">Description</label>
+      <input id="description" name="description" type="text" maxlength="2048">
+    </fieldset>
+    <button id="add-button" type="submit" disabled>Add</button>
+  </form>
+
+</main>
 </body>
 </html>

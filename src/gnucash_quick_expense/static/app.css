@@ -1,1 +1,233 @@
-body { margin: 0; }
+/* A ledger-green slip on a cool page. The amount is the one large element;
+   everything else stays small and quiet. */
+
+:root {
+  --ledger: #14432f;
+  --ledger-light: #2f6b50;
+  --page: #eef2f0;
+  --slip: #ffffff;
+  --ink: #17221d;
+  --muted: #55645d;
+  --rule: #c7d3cd;
+  --error: #a4262c;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.masthead {
+  background: var(--ledger);
+  padding: calc(env(safe-area-inset-top) + 1.25rem) 1.25rem 1.5rem;
+  color: #ffffff;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.masthead p {
+  margin: 0.25rem 0 0;
+  color: #d3e4db;
+  font-size: 0.9375rem;
+}
+
+main {
+  margin: 0 auto;
+  padding: 0 1rem calc(env(safe-area-inset-bottom) + 2rem);
+  max-width: 32rem;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  margin: 1rem 0 0;
+  border: 1px solid var(--rule);
+  border-radius: 0.75rem;
+  background: var(--slip);
+  padding: 1.25rem 1rem 1rem;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+fieldset {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+fieldset:disabled {
+  opacity: 0.45;
+}
+
+label {
+  margin: 0.875rem 0 0.25rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+input,
+select,
+button {
+  margin: 0;
+  border-radius: 0.5rem;
+  color: inherit;
+  font: inherit;
+  /* iOS Safari zooms into inputs whose text is smaller than 16px. */
+  font-size: 1rem;
+}
+
+input,
+select {
+  outline: none;
+  border: 1px solid var(--rule);
+  background: #ffffff;
+  padding: 0.75rem;
+  width: 100%;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--ledger-light);
+  outline-offset: 2px;
+}
+
+.amount {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--ledger);
+}
+
+.amount:focus-within {
+  outline: 3px solid var(--ledger-light);
+  outline-offset: 4px;
+}
+
+.amount input {
+  outline: none;
+  border: 0;
+  background: transparent;
+  padding: 0.25rem 0;
+  color: var(--ledger);
+  font-size: 2.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.currency {
+  color: var(--muted);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.combobox {
+  position: relative;
+}
+
+.combobox ul {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  margin: 0.25rem 0 0;
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1.5rem rgb(20 67 47 / 18%);
+  background: #ffffff;
+  padding: 0.25rem 0;
+  max-height: 16rem;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.combobox li {
+  cursor: pointer;
+  padding: 0.625rem 0.75rem;
+}
+
+.combobox li[aria-selected="true"] {
+  background: #dcebe3;
+}
+
+.note {
+  margin: 0.375rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+button {
+  margin: 1.25rem 0 0;
+  border: 0;
+  background: var(--ledger);
+  cursor: pointer;
+  padding: 0.875rem;
+  width: 100%;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+button:disabled {
+  background: #9fb2a8;
+  cursor: not-allowed;
+}
+
+.status {
+  margin: 1rem 0 0;
+  min-height: 1.5rem;
+  font-size: 0.9375rem;
+}
+
+.status:empty {
+  display: none;
+}
+
+.status.error {
+  color: var(--error);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .status.added {
+    animation: settle 0.4s ease-out;
+  }
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
