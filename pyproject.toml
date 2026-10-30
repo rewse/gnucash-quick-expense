@@ -1,0 +1,61 @@
+[project]
+name = "gnucash-quick-expense"
+version = "0.1.0"
+description = "A mobile web form that adds one expense to a GnuCash PostgreSQL database"
+readme = "README.md"
+authors = [
+    { name = "Shibata, Tats", email = "868951+rewse@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "httpx>=0.28.1",
+    "psycopg[binary]>=3.3.6",
+    "pyyaml>=6.0.3",
+    "starlette>=1.10.0",
+    "uvicorn>=0.54.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=9.1.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/rewse/gnucash-quick-expense"
+Repository = "https://github.com/rewse/gnucash-quick-expense"
+Issues = "https://github.com/rewse/gnucash-quick-expense/issues"
+
+[project.scripts]
+gnucash-quick-expense = "gnucash_quick_expense.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "src"
+
+[tool.uv]
+# Resolve only versions published at least 96 hours ago, including the
+# uv_build backend that uv installs into an isolated build environment,
+# which uv.lock does not pin.
+exclude-newer = "4 days"
+# Mirrors the exemption pattern in the maintainer's user-level uv config, so
+# uv.lock records the same options with or without that config. It has no
+# effect on resolution, because the project never installs itself from PyPI.
+exclude-newer-package = { gnucash-quick-expense = false }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+
+[tool.basedpyright]
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
+
+[tool.ruff.lint.isort]
+force-single-line = true
+single-line-exclusions = ["collections.abc", "typing"]
