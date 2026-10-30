@@ -27,7 +27,7 @@
 
 - iOS の日本語キーボードで入る全角の数字やピリオド（`１，２００．５`）: ブラウザが NFKC で半角に直し、カンマを落としてから送る。サーバーは ASCII 以外を 400 で拒否する。Task 1 と Task 7 にテストがある。
 - 指数表記、符号付き、0、桁の欠けた小数（`1e3`、`-5`、`+5`、`0`、`.5`、`5.`）: 400 で拒否する。Task 1 にテストがある。
-- 公表相場のサイトが落ちている、遅い、HTML の形が変わった: レート API は 500 にせず、`prices` 表の値か空欄で答える。Task 4 と Task 6 にテストがある。
+- 公表相場のサイトが落ちている、遅い、HTML の形が変わった: レート API は 500 にせず、GnuCash の `prices` 表のレートで計算した値を返す。欄が空になるのは、`prices` 表にもその通貨のレートが無いとき（2026-10-31 時点では EUR）だけ。Task 4 と Task 6 にテストがある。
 - `To` に候補と少しだけ違う文字列（大文字小文字の違い、末尾の空白）が入ったまま送られた: 500 ではなく 400 を返し、何も INSERT しない。Task 6 にテストがある。
 - 説明に 2048 文字を超える文字列や改行が入った: 2048 文字を超えたら 400。改行とタブは空白 1 つに置き換える。Task 5 にテストがある。
 
@@ -273,7 +273,7 @@ git commit -m "feat(config): load account patterns from YAML"
 
 `tests/test_accounts.py` で `choose` と `default_path` を `Account` のリストでテストする。placeholder の `Assets:Yen`、hidden の `Expenses:Old`、`Assets:Dollar:Cash`、`Assets:Yen:Cash`、`Expenses:Food:Dining` を入れる。`choose(..., AccountChoice(("Assets:**:Cash",), None))` のパスが `["Assets:Yen:Cash", "Assets:Dollar:Cash"]` になること、`Expenses:Old` と placeholder が出ないこと、候補に無い既定値で `default_path` が `None` を返すことを assert する。
 
-`tests/integration/schema.sql` には GnuCash の `accounts`、`commodities`、`prices`、`transactions`、`splits` の CREATE TABLE（列と型は gnucash-import-agent の `.kiro/skills/gnucash-import/references/gnucash-schema.md` と <https://wiki.gnucash.org/wiki/SQL> に合わせる。`guid` は `char(32)` の主キー）を書く。データは `Root Account`、`Assets`、`Assets:Yen`（placeholder）、`Assets:Yen:Cash`（JPY）、`Assets:Dollar:Cash`（USD）、`Assets:NT Dollar:Cash`（TWD）、`Expenses`、`Expenses:Food`、`Expenses:Food:Dining`（JPY）、hidden の `Expenses:Old`、もう 1 つの `parent_guid IS NULL` の行 `Template Root` と、JPY（fraction 1）、USD、TWD（fraction 100）の commodities、TWD から JPY への price 1 件（`date` 2026-08-06 10:59:00、`value_num` 487、`value_denom` 100）。
+`tests/integration/schema.sql` には GnuCash の `accounts`、`commodities`、`prices`、`transactions`、`splits` の CREATE TABLE（列と型は gnucash-import-agent の `.kiro/skills/gnucash-import/references/gnucash-schema.md` と <https://wiki.gnucash.org/wiki/SQL> に合わせる。`guid` は `char(32)` の主キー）を書く。データは `Root Account`、`Assets`、`Assets:Yen`（placeholder）、`Assets:Yen:Cash`（JPY）、`Assets:Dollar:Cash`（USD）、`Assets:NT Dollar:Cash`（TWD）、`Expenses`、`Expenses:Food`、`Expenses:Food:Dining`（JPY）、hidden の `Expenses:Old`、もう 1 つの `parent_guid IS NULL` の行 `Template Root` と、JPY（fraction 1）、USD、TWD（fraction 100）の commodities、TWD から JPY への price 1 件（`date` 2026-08-06 10:59:00、`value_num` 487、`value_denom` 100）と、JPY から USD への逆向きの price 1 件（`date` 2026-07-31 10:59:00、`value_num` 1、`value_denom` 150）。
 
 `tests/integration/test_accounts_db.py` は `fetch_all(gnucash_db)` のパスに `"Assets:Dollar:Cash"` があり、`Root Account` と `Template Root` で始まるパスが無く、USD の `fraction` が 100 であることを assert する。
 
@@ -359,7 +359,7 @@ def test_parse_page_returns_empty_for_unexpected_html():
 - `test_ttm_returns_none_when_the_site_fails`: transport が `httpx.ConnectTimeout` を投げても、HTTP 500 を返しても `None`。
 - `test_ttm_caches_past_days`: 過去の同じ日付で 2 回呼んでも要求は 1 回。JST の今日に表が無かった結果はキャッシュしない（公表前でも後で取れるようにする）。
 
-`tests/integration/test_rates_db.py`: Task 3 の schema の TWD 価格で、`gnucash_price(conn, twd_guid, jpy_guid, date(2026, 10, 31))` が `Quote(Decimal("4.87"), date(2026, 8, 6), "GnuCash price")` になり、`date(2026, 8, 5)` では `None` になる。
+`tests/integration/test_rates_db.py`: Task 3 の schema の TWD 価格で、`gnucash_price(conn, twd_guid, jpy_guid, date(2026, 10, 31))` が `Quote(Decimal("4.87"), date(2026, 8, 6), "GnuCash price")` になり、`date(2026, 8, 5)` では `None` になる。逆向きの price（JPY から USD へ、`date` 2026-07-31 10:59:00、`value_num` 1、`value_denom` 150）だけがある USD では、`gnucash_price(conn, usd_guid, jpy_guid, date(2026, 10, 31))` の `rate` が `Decimal("150")` になる。
 
 - [ ] **Step 3: テストが失敗することを確かめる**
 
@@ -368,7 +368,7 @@ Expected: `ImportError` で FAIL
 
 - [ ] **Step 4: `rates.py` を実装する**
 
-HTML の解析は標準ライブラリの `html.parser.HTMLParser` で行い、依存を増やさない。`MurcClient` の要求は `follow_redirects=False`、タイムアウト 5 秒。今日の判定は `zoneinfo.ZoneInfo("Asia/Tokyo")` で行う。`gnucash_price` は `prices` から `commodity_guid` と `currency_guid` が一致し、`date` が `on` の翌日 00:00 より前の最新 1 件を、`value_num / value_denom` の Decimal で返す。
+HTML の解析は標準ライブラリの `html.parser.HTMLParser` で行い、依存を増やさない。`MurcClient` の要求は `follow_redirects=False`、タイムアウト 5 秒。今日の判定は `zoneinfo.ZoneInfo("Asia/Tokyo")` で行う。`gnucash_price` は `prices` から、`date` が `on` の翌日 00:00 より前の行のうち、`commodity_guid` から `currency_guid` への向きの行と、その逆向きの行を合わせて最新の 1 件を選ぶ。GnuCash デスクトップ版も逆向きの price を使って換算するため。順向きなら `value_num / value_denom`、逆向きなら `value_denom / value_num` を Decimal で返す。
 
 - [ ] **Step 5: テストを通す**
 
@@ -464,7 +464,8 @@ API（すべて `POST`、`Content-Type: application/json` 以外は 415、本文
 - `test_unknown_to_account_is_400_and_inserts_nothing`: `"to": "expenses:foods:dining"` と `"to": "Expenses:Food:Dining "` で 400、`ledger.insert` が呼ばれない。
 - `test_foreign_expense_requires_to_amount`: USD の Cash から Dining へ、`to_amount` 無しで 400。`"1969"` 付きで 200 になり、`ledger.insert` に `to_quantity == Rational(1969, 1)` が渡る。
 - `test_rate_falls_back_to_gnucash_price`: `ttm` が `None`、`gnucash_price` が `Quote(Decimal("4.87"), date(2026, 8, 6), "GnuCash price")` のとき、TWD 3965 で `{"to_amount": "19310", "rate": "4.87", "rate_date": "2026-08-06", "source": "GnuCash price"}`。
-- `test_rate_survives_a_failing_site`: `ttm` も `gnucash_price` も `None` のとき、200 で値がすべて `null`。
+- `test_rate_uses_gnucash_price_when_the_site_fails`: 偽の `murc` に、`httpx.ConnectTimeout` を投げる `MockTransport` を持たせた本物の `rates.MurcClient` を渡す。`gnucash_price` が USD の `Quote(Decimal("150"), date(2026, 7, 31), "GnuCash price")` を返すとき、USD 12.50 で 200 になり、`to_amount` が `"1875"`、`source` が `"GnuCash price"`。
+- `test_rate_is_empty_only_without_any_rate`: `ttm` も `gnucash_price` も `None` のとき、200 で値がすべて `null`。
 - `test_invalid_date_is_400`: `"2026-02-30"` と `"2026/10/30"` で 400。
 - `test_security_headers`: `GET /` と API の応答に CSP、`nosniff`、`no-referrer` が付き、`GET /` と API は `no-store`。
 - `test_logs_do_not_contain_credentials`: `caplog` で全 API を呼んだ後、ログにパスワードの文字列が無い。
