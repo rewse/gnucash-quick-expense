@@ -52,7 +52,7 @@ def test_build_same_currency():
         assert split["reconcile_date"] is None
         assert split["lot_guid"] is None
         assert split["memo"] == split["action"] == ""
-    guids = [tx["guid"], *(s["guid"] for s in splits)]
+    guids = [str(tx["guid"]), *(str(s["guid"]) for s in splits)]
     assert all(GUID.fullmatch(g) for g in guids)
     assert len(set(guids)) == 3
 
