@@ -9,7 +9,7 @@ You sign in with a PostgreSQL username and password. The server uses them to rea
 When the two accounts use different currencies, for example US dollar cash paid into an expense account in Japanese yen, the form asks for the amount in the expense account's currency and fills it in for you:
 
 - For a yen expense account, it uses the TTM (middle rate) that MUFG Bank publishes on [murc-kawasesouba.jp](https://www.murc-kawasesouba.jp/fx/past_3month.php). On weekends and holidays it uses the last earlier business day.
-- When MUFG does not publish the currency, or the site cannot be reached, it uses the newest price on or before the date in the GnuCash price database, in either direction.
+- When MUFG does not publish the currency or the site cannot be reached, and for expense accounts in any other currency, it uses the newest price on or before the date in the GnuCash price database, in either direction.
 - When neither has a rate, you enter the amount yourself.
 
 The form shows where the rate came from and its date, and you can overwrite the amount before adding.
@@ -22,7 +22,7 @@ Amounts are handled as integer numerators and denominators, as GnuCash stores th
 - A GnuCash book in PostgreSQL
 - A reverse proxy that terminates TLS in front of the server
 
-Give the form its own PostgreSQL role that can read accounts and prices and insert transactions, and nothing else:
+Give the form its own PostgreSQL role that can read accounts and prices and insert transactions:
 
 ```sql
 CREATE ROLE "expense-form" LOGIN PASSWORD '...' CONNECTION LIMIT 5;
@@ -30,6 +30,13 @@ GRANT CONNECT ON DATABASE gnucash TO "expense-form";
 GRANT USAGE ON SCHEMA public TO "expense-form";
 GRANT SELECT ON accounts, commodities, prices TO "expense-form";
 GRANT INSERT ON transactions, splits TO "expense-form";
+```
+
+PostgreSQL also gives every role, through `PUBLIC`, the right to connect and create temporary tables, and before PostgreSQL 15 to create objects in the `public` schema. To leave the form's role with only the grants above, take those away from `PUBLIC` and grant `CONNECT` back to any other role that relied on them (the database owner keeps its rights):
+
+```sql
+REVOKE ALL ON DATABASE gnucash FROM PUBLIC;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 ```
 
 ## Configuration
