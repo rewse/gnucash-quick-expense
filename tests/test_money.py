@@ -47,8 +47,30 @@ def test_parse_amount_rejects(text, fraction):
 
 @pytest.mark.parametrize("fraction", [0, 3, 50, -10])
 def test_parse_amount_rejects_fractions_that_are_not_powers_of_ten(fraction):
-    with pytest.raises(money.AmountError):
+    with pytest.raises(ValueError) as raised:
         money.parse_amount("1", fraction)
+    assert not isinstance(raised.value, money.AmountError)
+
+
+def test_parse_amount_keeps_every_digit_up_to_the_bigint_limit():
+    # value_num is a PostgreSQL bigint.
+    assert money.parse_amount("92233720368547758.07", 100) == money.Rational(
+        2**63 - 1, 100
+    )
+
+
+@pytest.mark.parametrize(
+    ("text", "fraction"),
+    [("92233720368547758.08", 100), ("1" * 29, 1), ("9" * 30 + ".99", 100)],
+)
+def test_parse_amount_rejects_amounts_beyond_bigint(text, fraction):
+    with pytest.raises(money.AmountError):
+        money.parse_amount(text, fraction)
+
+
+def test_convert_rejects_results_beyond_bigint():
+    with pytest.raises(money.AmountError):
+        money.convert(decimal.Decimal("1" * 30), decimal.Decimal(1), 100)
 
 
 def test_convert_rounds_half_up_to_the_target_fraction():

@@ -8,7 +8,14 @@ import decimal
 import re
 from typing import NamedTuple
 
-_AMOUNT = re.compile(r"[0-9]+(?:\.[0-9]+)?", re.ASCII)
+_AMOUNT = re.compile(r"([0-9]+)(?:\.([0-9]+))?", re.ASCII)
+
+# GnuCash keeps value_num and quantity_num in PostgreSQL bigint columns.
+_BIGINT_MAX = 2**63 - 1
+
+# Enough significant digits that no product of a bigint-sized amount and an
+# exchange rate is rounded before the final quantize.
+_PRECISION = 60
 
 
 class AmountError(ValueError):
@@ -23,11 +30,23 @@ class Rational(NamedTuple):
 
 
 def _places(fraction: int) -> int:
-    """Returns the number of decimal places a power-of-ten fraction allows."""
+    """Returns the number of decimal places a power-of-ten fraction allows.
+
+    Raises:
+        ValueError: The fraction is not a positive power of ten. This signals
+            inconsistent commodity data rather than a bad entry, so it is not
+            an AmountError.
+    """
     text = str(fraction)
     if fraction < 1 or text != "1" + "0" * (len(text) - 1):
-        raise AmountError(f"fraction must be a power of ten: {fraction}")
+        raise ValueError(f"fraction must be a power of ten: {fraction}")
     return len(text) - 1
+
+
+def _checked(num: int, fraction: int) -> Rational:
+    if num > _BIGINT_MAX:
+        raise AmountError("The amount is too large.")
+    return Rational(num, fraction)
 
 
 def parse_amount(text: str, fraction: int) -> Rational:
@@ -40,36 +59,68 @@ def parse_amount(text: str, fraction: int) -> Rational:
         fraction: The commodity's smallest unit as a power of ten, such as 1
             for JPY or 100 for USD.
 
+    Returns:
+        The amount as num / fraction, with every entered digit kept.
+
     Raises:
-        AmountError: The text is not a positive amount the fraction can hold.
+        AmountError: The text is not a positive amount the fraction and a
+            bigint numerator can hold.
+        ValueError: The fraction is not a power of ten.
     """
     places = _places(fraction)
-    stripped = text.strip()
-    if not _AMOUNT.fullmatch(stripped):
+    match = _AMOUNT.fullmatch(text.strip())
+    if not match:
         raise AmountError("Enter the amount as digits, such as 1200 or 12.50.")
-    _, _, decimals = stripped.partition(".")
+    whole, decimals = match.group(1), match.group(2) or ""
     if len(decimals) > places:
         raise AmountError(f"The amount allows at most {places} decimal places.")
-    num = int(decimal.Decimal(stripped).scaleb(places))
+    num = int(whole) * fraction + int(decimals.ljust(places, "0") or "0")
     if num <= 0:
         raise AmountError("The amount must be greater than zero.")
-    return Rational(num, fraction)
+    return _checked(num, fraction)
 
 
 def to_decimal(value: Rational) -> decimal.Decimal:
-    """Returns the exact decimal value of a power-of-ten Rational."""
-    return decimal.Decimal(value.num).scaleb(-_places(value.denom))
+    """Returns the exact decimal value of a power-of-ten Rational.
+
+    Raises:
+        ValueError: The denominator is not a power of ten.
+    """
+    return decimal.Decimal(value.num).scaleb(
+        -_places(value.denom), decimal.Context(prec=_PRECISION)
+    )
 
 
 def convert(amount: decimal.Decimal, rate: decimal.Decimal, fraction: int) -> Rational:
-    """Multiplies by a rate and rounds half up to the target fraction."""
+    """Converts an amount at a rate into another commodity.
+
+    Args:
+        amount: The amount in the source commodity.
+        rate: Units of the target commodity per unit of the source.
+        fraction: The target commodity's smallest unit as a power of ten.
+
+    Returns:
+        amount * rate rounded half up, once, to the target fraction. A tiny
+        amount can round to zero; callers that need a positive quantity check
+        the result.
+
+    Raises:
+        AmountError: The result does not fit a bigint numerator.
+        ValueError: The fraction is not a power of ten.
+    """
     places = _places(fraction)
-    product = (amount * rate).quantize(
-        decimal.Decimal(1).scaleb(-places), rounding=decimal.ROUND_HALF_UP
-    )
-    return Rational(int(product.scaleb(places)), fraction)
+    with decimal.localcontext(decimal.Context(prec=_PRECISION)):
+        product = (amount * rate).quantize(
+            decimal.Decimal(1).scaleb(-places), rounding=decimal.ROUND_HALF_UP
+        )
+        num = int(product.scaleb(places))
+    return _checked(num, fraction)
 
 
 def format_amount(value: Rational) -> str:
-    """Formats a Rational with exactly as many decimals as its denominator."""
+    """Formats a Rational with exactly as many decimals as its denominator.
+
+    Raises:
+        ValueError: The denominator is not a power of ten.
+    """
     return f"{to_decimal(value):f}"
