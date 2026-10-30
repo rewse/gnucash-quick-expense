@@ -66,9 +66,8 @@ def test_parse_amount_keeps_every_digit_up_to_the_bigint_limit():
         ("1" * 29, 1),
         ("9" * 30 + ".99", 100),
         ("1" * 4301, 100),
-        ("0" * 4300 + "1", 1),
     ],
-    ids=["limit-plus-one", "29-digits", "32-digits", "4301-digits", "4300-zeros"],
+    ids=["limit-plus-one", "29-digits", "32-digits", "4301-digits"],
 )
 def test_parse_amount_rejects_amounts_beyond_bigint(text, fraction):
     with pytest.raises(money.AmountError):
@@ -77,6 +76,8 @@ def test_parse_amount_rejects_amounts_beyond_bigint(text, fraction):
 
 def test_parse_amount_ignores_leading_zeros():
     assert money.parse_amount("0" * 30 + "12.50", 100) == money.Rational(1250, 100)
+    # More zeros than int() accepts from a string.
+    assert money.parse_amount("0" * 4300 + "1", 1) == money.Rational(1, 1)
 
 
 @pytest.mark.parametrize(
