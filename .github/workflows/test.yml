@@ -1,0 +1,56 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      # The integration tests recreate the GnuCash tables in this disposable
+      # server; the password exists only inside the job.
+      postgres:
+        image: postgres:16@sha256:1beaa3084eee2676f20a9cd9928f0bf2c5bf674f8e49f81017912183d377c61c
+        env:
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GQE_TEST_DATABASE_URL: postgresql://postgres:test@127.0.0.1:5432/postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+
+      - name: Setup Aikido Safe Chain
+        uses: rewse/actions/setup-safe-chain@0d135e777b83f37d11136115713ee84b9d779b31  # v1.1.5
+
+      - name: Install dependencies
+        run: uv sync --extra test --safe-chain-skip-minimum-package-age
+
+      - name: Run tests
+        run: uv run --extra test pytest

@@ -1,0 +1,59 @@
+name: Dependency Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "14 11 * * 3"  # Every Wednesday at 20:14 JST (11:14 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safe-chain:
+    name: Aikido Safe Chain Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+
+      - name: Setup Aikido Safe Chain
+        uses: rewse/actions/setup-safe-chain@0d135e777b83f37d11136115713ee84b9d779b31  # v1.1.5
+
+      - name: Install dependencies with Aikido Safe Chain
+        run: uv sync --safe-chain-skip-minimum-package-age
+
+  osv-scan:
+    name: OSV-Scanner
+    if: github.event_name != 'pull_request'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@b1d267aea5211fa648d9d442fa64b90dbdcbdd36  # v2.7.0
+
+  # Fails only on vulnerabilities the PR introduces, so a PR is not blocked
+  # by ones already on main.
+  osv-scan-pr:
+    name: OSV-Scanner PR
+    if: github.event_name == 'pull_request'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@b1d267aea5211fa648d9d442fa64b90dbdcbdd36  # v2.7.0
