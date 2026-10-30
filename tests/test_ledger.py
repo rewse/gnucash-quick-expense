@@ -7,9 +7,7 @@ from gnucash_quick_expense import accounts
 from gnucash_quick_expense import ledger
 from gnucash_quick_expense import money
 
-JPY_CASH = accounts.Account(
-    "g-jpy-cash", "Assets:Yen:Cash", "c-jpy", "JPY", 1, True
-)
+JPY_CASH = accounts.Account("g-jpy-cash", "Assets:Yen:Cash", "c-jpy", "JPY", 1, True)
 USD_CASH = accounts.Account(
     "g-usd-cash", "Assets:Dollar:Cash", "c-usd", "USD", 100, True
 )

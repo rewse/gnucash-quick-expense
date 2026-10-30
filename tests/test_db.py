@@ -1,4 +1,6 @@
+import psycopg
 import pytest
+from psycopg import conninfo
 
 from gnucash_quick_expense import db
 
@@ -38,3 +40,15 @@ def test_settings_from_env_reads_every_variable():
 def test_settings_from_env_rejects_incomplete_settings(environ):
     with pytest.raises(ValueError):
         db.Settings.from_env(environ)
+
+
+def test_connect_allows_only_scram_authentication(monkeypatch):
+    seen = []
+    monkeypatch.setattr(psycopg, "connect", lambda conninfo: seen.append(conninfo))
+    db.connect(
+        db.Settings("db.example.com", 5432, "gnucash", "require", None), "u", "p"
+    )
+    assert len(seen) == 1
+    # A server that asks for a cleartext or MD5 password is refused before
+    # libpq sends anything.
+    assert conninfo.conninfo_to_dict(seen[0])["require_auth"] == "scram-sha-256"

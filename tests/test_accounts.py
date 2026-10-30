@@ -26,8 +26,8 @@ ALL = [
 def test_choose_returns_usable_matches_in_path_order():
     choice = config.AccountChoice(("Assets:**:Cash",), None)
     assert [a.path for a in accounts.choose(ALL, choice)] == [
-        "Assets:Yen:Cash",
         "Assets:Dollar:Cash",
+        "Assets:Yen:Cash",
     ]
 
 

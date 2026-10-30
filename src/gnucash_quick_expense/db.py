@@ -71,6 +71,9 @@ def connect(settings: Settings, user: str, password: str) -> psycopg.Connection:
         "sslmode": settings.sslmode,
         "connect_timeout": str(_CONNECT_TIMEOUT),
         "application_name": _APPLICATION_NAME,
+        # sslmode=require does not authenticate the server, so a host in the
+        # path could ask for a cleartext password; SCRAM never reveals it.
+        "require_auth": "scram-sha-256",
     }
     if settings.sslrootcert:
         params["sslrootcert"] = settings.sslrootcert

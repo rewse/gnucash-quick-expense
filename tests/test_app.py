@@ -106,9 +106,9 @@ def test_accounts_returns_choices_and_defaults(calls):
     assert response.status_code == 200
     assert response.json() == {
         "from": [
-            {"path": "Assets:Yen:Cash", "currency": "JPY"},
-            {"path": "Assets:NT Dollar:Cash", "currency": "TWD"},
             {"path": "Assets:Dollar:Cash", "currency": "USD"},
+            {"path": "Assets:NT Dollar:Cash", "currency": "TWD"},
+            {"path": "Assets:Yen:Cash", "currency": "JPY"},
         ],
         "to": [
             {"path": "Expenses:Food:Dining", "currency": "JPY"},

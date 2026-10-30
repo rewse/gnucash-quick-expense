@@ -10,7 +10,7 @@ The repository is public. Keep personal account names, host names, and database 
 
 - Never use floats for amounts, in Python or JavaScript. Amounts are strings until `money.parse_amount` turns them into integer numerators over the commodity's fraction.
 - Never log, echo, or store the PostgreSQL credentials. psycopg's `OperationalError` carries the password in its `pgconn` repr, so log only exception types and never chain a connect error.
-- A rejected login is HTTP 401 on `POST /api/*`; fail2ban relies on it. Input errors are 400 (415 for a body that is not JSON, 413 for one over 16 KiB), everything else 500 without details.
+- A rejected login is HTTP 401 on `POST /api/*`; fail2ban relies on it. Input errors are 400 (415 when the Content-Type is not application/json, 413 for a body over 16 KiB), everything else 500 without details.
 - Take account paths from the client and resolve them against the server-built choices; never accept a GUID from the client.
 - Keep the page free of inline scripts, style attributes, and remote resources so the CSP stays at `'self'`.
 
