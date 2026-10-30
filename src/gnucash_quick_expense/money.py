@@ -13,8 +13,8 @@ _AMOUNT = re.compile(r"([0-9]+)(?:\.([0-9]+))?", re.ASCII)
 # GnuCash keeps value_num and quantity_num in PostgreSQL bigint columns.
 _BIGINT_MAX = 2**63 - 1
 
-# Enough significant digits that no product of a bigint-sized amount and an
-# exchange rate is rounded before the final quantize.
+# Enough significant digits that products of bigint-sized amounts and
+# realistic exchange rates are not rounded before the final quantize.
 _PRECISION = 60
 
 
@@ -71,10 +71,13 @@ def parse_amount(text: str, fraction: int) -> Rational:
     match = _AMOUNT.fullmatch(text.strip())
     if not match:
         raise AmountError("Enter the amount as digits, such as 1200 or 12.50.")
-    whole, decimals = match.group(1), match.group(2) or ""
+    whole, decimals = match.group(1).lstrip("0"), match.group(2) or ""
     if len(decimals) > places:
         raise AmountError(f"The amount allows at most {places} decimal places.")
-    num = int(whole) * fraction + int(decimals.ljust(places, "0") or "0")
+    # Checked before int(), which refuses strings over 4300 digits.
+    if len(whole) > len(str(_BIGINT_MAX)):
+        raise AmountError("The amount is too large.")
+    num = int(whole or "0") * fraction + int(decimals.ljust(places, "0") or "0")
     if num <= 0:
         raise AmountError("The amount must be greater than zero.")
     return _checked(num, fraction)
@@ -110,9 +113,14 @@ def convert(amount: decimal.Decimal, rate: decimal.Decimal, fraction: int) -> Ra
     """
     places = _places(fraction)
     with decimal.localcontext(decimal.Context(prec=_PRECISION)):
-        product = (amount * rate).quantize(
-            decimal.Decimal(1).scaleb(-places), rounding=decimal.ROUND_HALF_UP
-        )
+        try:
+            product = (amount * rate).quantize(
+                decimal.Decimal(1).scaleb(-places), rounding=decimal.ROUND_HALF_UP
+            )
+        except decimal.InvalidOperation as e:
+            # quantize raises this when the result needs more than the
+            # context's digits, which is far beyond a bigint already.
+            raise AmountError("The amount is too large.") from e
         num = int(product.scaleb(places))
     return _checked(num, fraction)
 

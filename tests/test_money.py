@@ -61,16 +61,31 @@ def test_parse_amount_keeps_every_digit_up_to_the_bigint_limit():
 
 @pytest.mark.parametrize(
     ("text", "fraction"),
-    [("92233720368547758.08", 100), ("1" * 29, 1), ("9" * 30 + ".99", 100)],
+    [
+        ("92233720368547758.08", 100),
+        ("1" * 29, 1),
+        ("9" * 30 + ".99", 100),
+        ("1" * 4301, 100),
+        ("0" * 4300 + "1", 1),
+    ],
+    ids=["limit-plus-one", "29-digits", "32-digits", "4301-digits", "4300-zeros"],
 )
 def test_parse_amount_rejects_amounts_beyond_bigint(text, fraction):
     with pytest.raises(money.AmountError):
         money.parse_amount(text, fraction)
 
 
-def test_convert_rejects_results_beyond_bigint():
+def test_parse_amount_ignores_leading_zeros():
+    assert money.parse_amount("0" * 30 + "12.50", 100) == money.Rational(1250, 100)
+
+
+@pytest.mark.parametrize(
+    ("amount", "rate"),
+    [("1" * 30, "1"), ("1e19", "1e40")],
+)
+def test_convert_rejects_results_beyond_bigint(amount, rate):
     with pytest.raises(money.AmountError):
-        money.convert(decimal.Decimal("1" * 30), decimal.Decimal(1), 100)
+        money.convert(decimal.Decimal(amount), decimal.Decimal(rate), 100)
 
 
 def test_convert_rounds_half_up_to_the_target_fraction():
