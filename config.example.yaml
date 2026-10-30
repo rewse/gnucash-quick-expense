@@ -1,0 +1,13 @@
+# Accounts offered in the From and To lists, by full account path without
+# "Root Account:". In a pattern, "*" matches one account name and "**"
+# matches one or more, so "Assets:**:Cash" matches "Assets:Current Assets:Cash".
+# Placeholder and hidden accounts are never offered. A default that matches
+# no offered account leaves the list unselected.
+from_accounts:
+  patterns:
+    - "Assets:**:Cash"
+  default: "Assets:Current Assets:Cash"
+to_accounts:
+  patterns:
+    - "Expenses:**"
+  default: "Expenses:Dining"
