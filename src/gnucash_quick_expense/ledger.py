@@ -13,7 +13,8 @@ from gnucash_quick_expense import money
 # GnuCash's own time for a transaction entered by date alone.
 _POST_TIME = datetime.time(10, 59, tzinfo=datetime.UTC)
 _DESCRIPTION_MAX = 2048
-_SPACES = re.compile(r"\s+")
+# Line breaks and tabs; other spacing, such as an ideographic space, stays.
+_BREAKS = re.compile(r"[\t\n\v\f\r]+")
 
 _TRANSACTION_SQL = """
 INSERT INTO transactions (guid, currency_guid, num, post_date, enter_date, description)
@@ -58,12 +59,12 @@ class Expense(NamedTuple):
 
 
 def clean_description(text: str) -> str:
-    """Trims a description and turns each run of whitespace into one space.
+    """Trims a description and turns each run of line breaks and tabs into a space.
 
     Raises:
         EntryError: The cleaned text is longer than the column allows.
     """
-    cleaned = _SPACES.sub(" ", text).strip()
+    cleaned = _BREAKS.sub(" ", text).strip()
     if len(cleaned) > _DESCRIPTION_MAX:
         raise EntryError(
             f"The description allows at most {_DESCRIPTION_MAX} characters."
@@ -141,14 +142,22 @@ def _naive_utc(row: dict[str, object]) -> dict[str, object]:
 
 
 def insert(conn: psycopg.Connection, expense: Expense) -> str:
-    """Inserts an expense in one database transaction.
+    """Inserts an expense and commits it.
+
+    Reads the caller made on the same connection, such as the account
+    lookup, leave it inside an implicit transaction, where
+    conn.transaction() only opens a savepoint; the final commit makes the
+    rows durable either way. The caller must not have uncommitted writes
+    of its own on the connection.
 
     Returns:
         The GUID of the new transaction.
     """
     transaction, splits = build(expense, datetime.datetime.now(datetime.UTC))
+    # Naive values go out as timestamp without time zone, so the session
+    # time zone does not shift them.
     with conn.transaction(), conn.cursor() as cur:
-        cur.execute("SET LOCAL TIME ZONE 'UTC'")
         cur.execute(_TRANSACTION_SQL, _naive_utc(transaction))
         cur.executemany(_SPLIT_SQL, [_naive_utc(s) for s in splits])
+    conn.commit()
     return str(transaction["guid"])

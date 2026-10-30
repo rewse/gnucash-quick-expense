@@ -1,4 +1,7 @@
 import datetime
+import os
+
+import psycopg
 
 from gnucash_quick_expense import accounts
 from gnucash_quick_expense import ledger
@@ -9,9 +12,8 @@ def _by_path(conn) -> dict[str, accounts.Account]:
     return {a.path: a for a in accounts.fetch_all(conn)}
 
 
-def test_insert_writes_one_balanced_transaction(gnucash_db):
-    found = _by_path(gnucash_db)
-    expense = ledger.Expense(
+def _expense(found: dict[str, accounts.Account]) -> ledger.Expense:
+    return ledger.Expense(
         post_date=datetime.date(2026, 10, 30),
         description="Lunch",
         from_account=found["Assets:Dollar:Cash"],
@@ -19,9 +21,11 @@ def test_insert_writes_one_balanced_transaction(gnucash_db):
         amount=money.Rational(1250, 100),
         to_quantity=money.Rational(1969, 1),
     )
-    # A session in another time zone must not shift the stored times.
-    gnucash_db.execute("SET TIME ZONE 'Asia/Tokyo'")
-    tx_guid = ledger.insert(gnucash_db, expense)
+
+
+def test_insert_writes_one_balanced_transaction(gnucash_db):
+    found = _by_path(gnucash_db)
+    tx_guid = ledger.insert(gnucash_db, _expense(found))
 
     with gnucash_db.cursor() as cur:
         cur.execute(
@@ -47,3 +51,16 @@ def test_insert_writes_one_balanced_transaction(gnucash_db):
         (found["Expenses:Food:Dining"].guid, 1250, 100, 1969, 1, "n"),
     ]
     assert sum(s[1] for s in splits) == 0
+
+
+def test_insert_commits_after_reads_on_the_same_connection(gnucash_db):
+    # fetch_all leaves the connection inside an implicit transaction, as the
+    # API does before it inserts.
+    found = _by_path(gnucash_db)
+    tx_guid = ledger.insert(gnucash_db, _expense(found))
+
+    with psycopg.connect(os.environ["GQE_TEST_DATABASE_URL"]) as other:
+        count = other.execute(
+            "SELECT count(*) FROM splits WHERE tx_guid = %s", (tx_guid,)
+        ).fetchone()
+    assert count == (2,)

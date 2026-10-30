@@ -90,3 +90,7 @@ def test_clean_description():
     assert ledger.clean_description("x" * 2048) == "x" * 2048
     with pytest.raises(ledger.EntryError):
         ledger.clean_description("x" * 2049)
+
+
+def test_clean_description_keeps_other_spacing():
+    assert ledger.clean_description("Lunch  with\u3000A") == "Lunch  with\u3000A"
