@@ -196,9 +196,13 @@ GnuCash デスクトップ版を開いたままでも INSERT はできるが、�
 
 アプリは `transactions` と `splits` を SELECT できないので、INSERT の前に GUID の重複を確かめない。uuid4 の衝突は無視できるほど起きにくく、万一重複しても主キーの制約で INSERT が失敗するだけで済む。
 
-## CloudFront（`rewse/cloudfront-waf`）
+## CloudFront（`rewse/cloudfront-waf`）と、そのほかのサブドメイン作業
 
-`infra/template.yaml` の名前リストとテストに `expense.example.com` を足して、スタックをデプロイし直す。直近のコミット `0c4a5bf feat: serve zabbix-mcp.example.com through CloudFront` と同じ作業で、DNS の切り替えは `docs/setup.md` に従う。
+ansible-playbooks の `AGENTS.md` の「Subdomains」節に従う。
+
+- `~/git/cloudfront-waf`: `infra/template.yaml` の `Aliases`、`scripts/switch-dns.sh` の `SUBDOMAINS`、`tests/test_template.py`、`tests/test_switch_dns.py`、`README.md` と `docs/setup.md` の名前の一覧と数に `expense` を足す。直近のコミット `0c4a5bf feat: serve zabbix-mcp.example.com through CloudFront` と同じ作業。`scripts/deploy.sh` と `scripts/switch-dns.sh cloudfront` は `admin` プロファイルのあるユーザーの会社の Mac でしか実行できないので、ユーザーに実行してもらう。
+- UniFi: `expense.example.com` を `web.example.com` へ向ける CNAME の DNS ポリシーを足す。家と VPN からは CloudFront を通らずに web へ届く。
+- `~/git/security-agent`: インターネットから誰でも届く名前なので、毎月のペンテストを `targets.toml` と `infra/template.yaml` に足し、対象ドメインを検証する。ペンテストには DB の資格情報を渡さない。渡すと、実際の帳簿に試験用の取引が入ってしまう。
 
 ## builder に任せること
 
