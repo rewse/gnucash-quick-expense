@@ -17,13 +17,13 @@
 
 <main>
   <p id="status" class="status" role="status" aria-live="polite"></p>
-  <form id="sign-in" class="panel" autocomplete="on">
+  <form id="sign-in" class="panel" method="post" autocomplete="on">
     <h2>Sign in to the database</h2>
     <label for="username">Username</label>
     <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
     <label for="password">Password</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required>
-    <button id="sign-in-button" type="submit">Sign in</button>
+    <button id="sign-in-button" type="submit" disabled>Sign in</button>
   </form>
 
   <form id="expense" class="panel" autocomplete="off" novalidate>

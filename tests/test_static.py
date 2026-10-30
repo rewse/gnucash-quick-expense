@@ -63,6 +63,22 @@ def test_credentials_fields_support_password_managers():
     assert attrs["password"].get("type") == "password"
 
 
+def test_sign_in_never_submits_credentials_in_a_url():
+    attrs = {a.get("id"): a for _, a in _tags().tags if a.get("id")}
+    # A native submit before app.js runs must not become GET /?password=...
+    assert attrs["sign-in"].get("method") == "post"
+    assert "disabled" in attrs["sign-in-button"]
+    assert "signInButton.disabled = false" in SCRIPT
+
+
+def test_options_are_chosen_on_click_so_touch_can_scroll():
+    assert '"click"' in SCRIPT
+    assert (
+        'addEventListener("pointerdown", (event) => {\n          event.preventDefault();\n          chooseTo'
+        not in SCRIPT
+    )
+
+
 def test_amount_fields_ask_for_a_decimal_keypad():
     attrs = {a.get("id"): a for _, a in _tags().tags if a.get("id")}
     assert attrs["amount"].get("inputmode") == "decimal"

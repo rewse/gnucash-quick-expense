@@ -134,11 +134,11 @@
         item.setAttribute("role", "option");
         item.setAttribute("aria-selected", "false");
         item.textContent = account.path;
-        // pointerdown runs before the input loses focus and closes the list.
-        item.addEventListener("pointerdown", (event) => {
-          event.preventDefault();
-          chooseTo(account.path);
-        });
+        // Keeps the focus in the input, which would otherwise blur and close
+        // the list before the click. Choosing on click rather than here lets
+        // a finger that lands on an option scroll the list instead.
+        item.addEventListener("pointerdown", (event) => event.preventDefault());
+        item.addEventListener("click", () => chooseTo(account.path));
         return item;
       }),
     );
@@ -148,7 +148,7 @@
   };
 
   toInput.addEventListener("focus", () => {
-    // Show every account, not only the one already in the field.
+    // Selecting the current account lets the first keystroke replace it.
     if (selectedTo()) toInput.select();
     openOptions();
   });
@@ -195,8 +195,15 @@
     }).catch(() => null);
     if (request !== rateRequest) return;
     if (result === null || result.status !== 200) {
-      rateNote.textContent =
-        result && result.status === 400 ? result.data.error : "No rate found. Enter the amount.";
+      toAmountInput.value = "";
+      if (result && result.status === 401) {
+        rateNote.textContent = "Wrong username or password.";
+      } else if (result && result.status === 400) {
+        rateNote.textContent = result.data.error;
+      } else {
+        rateNote.textContent = "No rate found. Enter the amount.";
+      }
+      updateAddButton();
       return;
     }
     toAmountInput.value = result.data.to_amount ?? "";
@@ -204,8 +211,14 @@
     updateAddButton();
   };
 
+  // The converted amount belongs to the inputs it was computed from, so any
+  // change clears it, which keeps Add disabled until the new one arrives.
   const scheduleRate = () => {
     clearTimeout(rateTimer);
+    rateRequest += 1;
+    toAmountInput.value = "";
+    rateNote.textContent = "Looking up the rate…";
+    updateAddButton();
     rateTimer = setTimeout(requestRate, 300);
   };
 
@@ -238,6 +251,8 @@
   // --- Signing in and adding -----------------------------------------------
 
   const resetToSignedOut = () => {
+    clearTimeout(rateTimer);
+    rateRequest += 1;
     credentials = null;
     passwordInput.value = "";
     amountInput.value = "";
@@ -281,6 +296,10 @@
     accountsChanged();
     amountInput.focus();
   });
+
+  // Enabled only once this script runs, so the form cannot be submitted
+  // natively before its submit handler exists.
+  signInButton.disabled = false;
 
   expenseForm.addEventListener("submit", async (event) => {
     event.preventDefault();
