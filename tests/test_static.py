@@ -106,3 +106,31 @@ def test_script_inserts_no_html():
     assert not re.search(r"\.(inner|outer)HTML\s*=", SCRIPT)
     assert "insertAdjacentHTML" not in SCRIPT
     assert "eval(" not in SCRIPT
+
+
+def test_a_tap_on_an_option_still_produces_a_click():
+    # In WebKit, cancelling a touch pointerdown suppresses the click, so iOS
+    # Safari would never choose the option.
+    assert '"pointerdown", (event) => event.preventDefault()' not in SCRIPT
+    assert '"mousedown", (event) => event.preventDefault()' in SCRIPT
+
+
+def test_page_has_a_home_screen_icon():
+    links = {a.get("rel"): a for t, a in _tags().tags if t == "link"}
+    assert links["apple-touch-icon"]["href"] == "/static/apple-touch-icon.png"
+    icon = (STATIC / "apple-touch-icon.png").read_bytes()
+    assert icon.startswith(b"\x89PNG\r\n\x1a\n")
+    width, height = int.from_bytes(icon[16:20]), int.from_bytes(icon[20:24])
+    assert (width, height) == (180, 180)
+
+
+def test_date_field_cannot_overflow_on_ios():
+    rule = re.search(r'input\[type="date"\]\s*\{([^}]*)\}', STYLE)
+    assert rule
+    assert "appearance: none" in rule.group(1)
+    assert "min-width: 0" in rule.group(1)
+
+
+def test_palette_is_dark_blue():
+    assert "#14432f" not in STYLE + INDEX
+    assert "--navy: #" in STYLE

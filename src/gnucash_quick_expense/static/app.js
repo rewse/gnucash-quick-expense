@@ -135,9 +135,12 @@
         item.setAttribute("aria-selected", "false");
         item.textContent = account.path;
         // Keeps the focus in the input, which would otherwise blur and close
-        // the list before the click. Choosing on click rather than here lets
-        // a finger that lands on an option scroll the list instead.
-        item.addEventListener("pointerdown", (event) => event.preventDefault());
+        // the list before a mouse click lands. Only mousedown is cancelled:
+        // cancelling a touch pointerdown makes WebKit drop the compatibility
+        // mouse events and the click, so a tap on iOS would choose nothing.
+        // Choosing on click rather than here lets a finger that lands on an
+        // option scroll the list instead.
+        item.addEventListener("mousedown", (event) => event.preventDefault());
         item.addEventListener("click", () => chooseTo(account.path));
         return item;
       }),

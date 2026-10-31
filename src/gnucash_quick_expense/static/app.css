@@ -1,14 +1,14 @@
-/* A ledger-green slip on a cool page. The amount is the one large element;
+/* A white slip under a dark blue band on a cool page. The amount is the one large element;
    everything else stays small and quiet. */
 
 :root {
-  --ledger: #14432f;
-  --ledger-light: #2f6b50;
-  --page: #eef2f0;
+  --navy: #14305a;
+  --navy-light: #3a5f9a;
+  --page: #eef1f6;
   --slip: #ffffff;
-  --ink: #17221d;
-  --muted: #55645d;
-  --rule: #c7d3cd;
+  --ink: #161d2b;
+  --muted: #535d70;
+  --rule: #c7cfdc;
   --error: #a4262c;
   color-scheme: light;
 }
@@ -27,7 +27,7 @@ body {
 }
 
 .masthead {
-  background: var(--ledger);
+  background: var(--navy);
   padding: calc(env(safe-area-inset-top) + 1.25rem) 1.25rem 1.5rem;
   color: #ffffff;
 }
@@ -41,7 +41,7 @@ body {
 
 .masthead p {
   margin: 0.25rem 0 0;
-  color: #d3e4db;
+  color: #cdd8ea;
   font-size: 0.9375rem;
 }
 
@@ -114,19 +114,33 @@ select {
 input:focus-visible,
 select:focus-visible,
 button:focus-visible {
-  outline: 3px solid var(--ledger-light);
+  outline: 3px solid var(--navy-light);
   outline-offset: 2px;
+}
+
+/* iOS Safari gives a date input an intrinsic width that ignores width: 100%
+   and pushes it past the slip, and centres its value. */
+input[type="date"] {
+  display: block;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
 }
 
 .amount {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
-  border-bottom: 2px solid var(--ledger);
+  border-bottom: 2px solid var(--navy);
 }
 
 .amount:focus-within {
-  outline: 3px solid var(--ledger-light);
+  outline: 3px solid var(--navy-light);
   outline-offset: 4px;
 }
 
@@ -135,7 +149,7 @@ button:focus-visible {
   border: 0;
   background: transparent;
   padding: 0.25rem 0;
-  color: var(--ledger);
+  color: var(--navy);
   font-size: 2.75rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -160,7 +174,7 @@ button:focus-visible {
   margin: 0.25rem 0 0;
   border: 1px solid var(--rule);
   border-radius: 0.5rem;
-  box-shadow: 0 0.5rem 1.5rem rgb(20 67 47 / 18%);
+  box-shadow: 0 0.5rem 1.5rem rgb(20 48 90 / 18%);
   background: #ffffff;
   padding: 0.25rem 0;
   max-height: 16rem;
@@ -174,7 +188,7 @@ button:focus-visible {
 }
 
 .combobox li[aria-selected="true"] {
-  background: #dcebe3;
+  background: #dce4f2;
 }
 
 .note {
@@ -186,7 +200,7 @@ button:focus-visible {
 button {
   margin: 1.25rem 0 0;
   border: 0;
-  background: var(--ledger);
+  background: var(--navy);
   cursor: pointer;
   padding: 0.875rem;
   width: 100%;
@@ -195,7 +209,7 @@ button {
 }
 
 button:disabled {
-  background: #9fb2a8;
+  background: #9ba7ba;
   cursor: not-allowed;
 }
 

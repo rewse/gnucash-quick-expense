@@ -37,6 +37,7 @@ _STATIC = pathlib.Path(__file__).with_name("static")
 _ASSETS = {
     "app.css": "text/css; charset=utf-8",
     "app.js": "text/javascript; charset=utf-8",
+    "apple-touch-icon.png": "image/png",
 }
 _MAX_BODY = 16 * 1024
 _JPY = "JPY"

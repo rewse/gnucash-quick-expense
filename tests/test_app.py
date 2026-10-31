@@ -396,7 +396,7 @@ def test_security_headers(calls):
 def test_static_files_are_versioned_and_cached(calls):
     client = _client(calls)
     page = client.get("/").text
-    for name in ("app.js", "app.css"):
+    for name in ("app.js", "app.css", "apple-touch-icon.png"):
         marker = f"/static/{name}?v="
         assert marker in page
         version = page.split(marker, 1)[1].split('"', 1)[0]
