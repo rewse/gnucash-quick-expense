@@ -11,3 +11,7 @@ to_accounts:
   patterns:
     - "Expenses:**"
   default: "Expenses:Dining"
+# PostgreSQL roles the form may sign in as. A username outside this list is
+# rejected like a wrong password, without connecting to the database.
+users:
+  - expense-form

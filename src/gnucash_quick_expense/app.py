@@ -173,6 +173,10 @@ def create_app(
         try:
             data = await _body(request)
             user, password = _text(data, "username"), _text(data, "password")
+            # A role outside the list is answered like a wrong password, so
+            # the public form cannot be used to try passwords for other roles.
+            if user not in cfg.users:
+                raise db.AuthError()
             conn = await concurrency.run_in_threadpool(
                 connect, settings, user, password
             )

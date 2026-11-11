@@ -35,6 +35,7 @@ ALL = [
 CONFIG = config.Config(
     config.AccountChoice(("Assets:**:Cash",), "Assets:Yen:Cash"),
     config.AccountChoice(("Expenses:**",), "Expenses:Food:Dining"),
+    frozenset({"expense-form"}),
 )
 SETTINGS = db.Settings("db.invalid", 5432, "gnucash", "require", None)
 
@@ -134,6 +135,23 @@ def test_wrong_password_is_401(calls, path):
     assert response.status_code == 401
     assert response.json() == {"error": "Wrong username or password."}
     assert PASSWORD not in response.text
+
+
+@pytest.mark.parametrize("path", ["/api/accounts", "/api/rate", "/api/expenses"])
+@pytest.mark.parametrize("user", ["postgres", "Expense-Form", "expense-form "])
+def test_unlisted_username_is_401_without_connecting(calls, path, user):
+    response = _post(
+        _client(calls),
+        path,
+        username=user,
+        **{"from": "Assets:Dollar:Cash", "to": "Expenses:Food:Dining"},
+        date="2026-10-30",
+        amount="1",
+        description="",
+    )
+    assert response.status_code == 401
+    assert response.json() == {"error": "Wrong username or password."}
+    assert calls["connections"] == []
 
 
 @pytest.mark.parametrize("path", ["/api/accounts", "/api/rate", "/api/expenses"])
