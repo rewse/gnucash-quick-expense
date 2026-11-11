@@ -43,6 +43,8 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 
 Copy [`config.example.yaml`](config.example.yaml) and list the account paths to offer, without the leading `Root Account:`. In a pattern, `*` matches one account name and `**` matches one or more. Placeholder and hidden accounts are never offered.
 
+List under `users` the PostgreSQL roles the form may sign in as. The form is meant to be reachable from the internet, so a username outside the list gets the same answer as a wrong password and never reaches the database; nobody can use the form to try passwords for the other roles on the server.
+
 ```yaml
 from_accounts:
   patterns:
@@ -52,6 +54,8 @@ to_accounts:
   patterns:
     - "Expenses:**"
   default: "Expenses:Dining"
+users:
+  - expense-form
 ```
 
 The database location comes from environment variables:

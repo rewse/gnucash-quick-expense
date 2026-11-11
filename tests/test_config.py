@@ -37,6 +37,7 @@ def test_load_reads_the_example():
     assert loaded.from_accounts.default == "Assets:Current Assets:Cash"
     assert loaded.to_accounts.patterns == ("Expenses:**",)
     assert loaded.to_accounts.default == "Expenses:Dining"
+    assert loaded.users == frozenset({"expense-form"})
 
 
 def test_load_allows_a_missing_default(tmp_path):
@@ -44,6 +45,7 @@ def test_load_allows_a_missing_default(tmp_path):
     path.write_text(
         "from_accounts: {patterns: ['Assets:**:Cash']}\n"
         "to_accounts: {patterns: ['Expenses:**']}\n"
+        "users: [expense-form]\n"
     )
     assert config.load(path).to_accounts.default is None
 
@@ -61,6 +63,10 @@ def test_load_allows_a_missing_default(tmp_path):
         ),
         "- not a mapping\n",
         "from_accounts: [\n",
+        "from_accounts: {patterns: ['A:**']}\nto_accounts: {patterns: ['E:**']}\n",
+        "from_accounts: {patterns: ['A:**']}\nto_accounts: {patterns: ['E:**']}\nusers: []\n",
+        "from_accounts: {patterns: ['A:**']}\nto_accounts: {patterns: ['E:**']}\nusers: [1]\n",
+        "from_accounts: {patterns: ['A:**']}\nto_accounts: {patterns: ['E:**']}\nusers: ['']\n",
     ],
     ids=[
         "empty-patterns",
@@ -70,6 +76,10 @@ def test_load_allows_a_missing_default(tmp_path):
         "default-not-a-string",
         "not-a-mapping",
         "invalid-yaml",
+        "missing-users",
+        "empty-users",
+        "user-not-a-string",
+        "user-empty-string",
     ],
 )
 def test_load_rejects_invalid_files(tmp_path, text):

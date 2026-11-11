@@ -1,4 +1,4 @@
-"""The YAML file that names which accounts the form offers."""
+"""The YAML file that names which accounts the form offers and who may sign in."""
 
 import pathlib
 from typing import NamedTuple
@@ -18,10 +18,11 @@ class AccountChoice(NamedTuple):
 
 
 class Config(NamedTuple):
-    """The account lists of the form."""
+    """The account lists of the form and the roles it may sign in as."""
 
     from_accounts: AccountChoice
     to_accounts: AccountChoice
+    users: frozenset[str]
 
 
 def matches(pattern: str, path: str) -> bool:
@@ -64,6 +65,17 @@ def _choice(data: object, key: str) -> AccountChoice:
     return AccountChoice(tuple(patterns), default)
 
 
+def _users(data: object) -> frozenset[str]:
+    users = data.get("users") if isinstance(data, dict) else None
+    if (
+        not isinstance(users, list)
+        or not users
+        or not all(isinstance(u, str) and u for u in users)
+    ):
+        raise ConfigError("users must be a non-empty list of strings")
+    return frozenset(users)
+
+
 def load(path: pathlib.Path) -> Config:
     """Reads and validates a configuration file.
 
@@ -76,4 +88,6 @@ def load(path: pathlib.Path) -> Config:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
         raise ConfigError(f"{path} is not valid YAML: {e}") from e
-    return Config(_choice(data, "from_accounts"), _choice(data, "to_accounts"))
+    return Config(
+        _choice(data, "from_accounts"), _choice(data, "to_accounts"), _users(data)
+    )
