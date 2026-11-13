@@ -26,7 +26,7 @@ jobs:
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
 
       - name: Setup Aikido Safe Chain
-        uses: rewse/actions/setup-safe-chain@90d01bd07cb0cb6f5fb1dcb89a01b3165bb50c2b  # v1.1.8
+        uses: rewse/actions/setup-safe-chain@b9adb62fa1a195e38d32a54777a299111cc71d12  # v1.1.11
 
       - name: Install dependencies
         run: uv sync --extra test --safe-chain-skip-minimum-package-age
