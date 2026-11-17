@@ -1,5 +1,6 @@
 import datetime
 import decimal
+import json
 import logging
 import typing
 
@@ -151,6 +152,22 @@ def test_unlisted_username_is_401_without_connecting(calls, path, user):
     )
     assert response.status_code == 401
     assert response.json() == {"error": "Wrong username or password."}
+    assert calls["connections"] == []
+
+
+@pytest.mark.parametrize("path", ["/api/accounts", "/api/rate", "/api/expenses"])
+@pytest.mark.parametrize("user", ["expense-form", "postgres"])
+@pytest.mark.parametrize("field", ["username", "password"])
+def test_text_that_is_not_utf8_is_400_for_every_username(calls, path, user, field):
+    # A lone surrogate is valid in JSON but cannot be encoded for libpq.
+    body = {"username": user, "password": PASSWORD, field: "\ud800"}
+    response = _client(calls).post(
+        path,
+        content=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"error": f"{field} is not valid text."}
     assert calls["connections"] == []
 
 
