@@ -69,6 +69,8 @@ The database location comes from environment variables:
 | `GQE_DB_SSLMODE` | `require` | libpq `sslmode` |
 | `GQE_DB_SSLROOTCERT` | | CA bundle for `verify-ca` or `verify-full` |
 
+The connection accepts only SCRAM-SHA-256 authentication, and unless `GQE_DB_SSLMODE` is `disable` it also requires channel binding (SCRAM-SHA-256-PLUS over TLS), so a server or proxy that does not offer it is refused.
+
 ## Running
 
 ```sh

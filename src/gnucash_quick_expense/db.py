@@ -75,6 +75,10 @@ def connect(settings: Settings, user: str, password: str) -> psycopg.Connection:
         # path could ask for a cleartext password; SCRAM never reveals it.
         "require_auth": "scram-sha-256",
     }
+    if settings.sslmode != "disable":
+        # Binds SCRAM to the server's TLS certificate, so a host in the path
+        # cannot relay the exchange to the real server and keep the session.
+        params["channel_binding"] = "require"
     if settings.sslrootcert:
         params["sslrootcert"] = settings.sslrootcert
     try:

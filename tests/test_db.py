@@ -52,3 +52,22 @@ def test_connect_allows_only_scram_authentication(monkeypatch):
     # A server that asks for a cleartext or MD5 password is refused before
     # libpq sends anything.
     assert conninfo.conninfo_to_dict(seen[0])["require_auth"] == "scram-sha-256"
+
+
+def _conninfo(monkeypatch, sslmode):
+    seen = []
+    monkeypatch.setattr(psycopg, "connect", lambda conninfo: seen.append(conninfo))
+    db.connect(db.Settings("db.example.com", 5432, "gnucash", sslmode, None), "u", "p")
+    assert len(seen) == 1
+    return conninfo.conninfo_to_dict(seen[0])
+
+
+@pytest.mark.parametrize("sslmode", ["prefer", "require", "verify-ca", "verify-full"])
+def test_connect_binds_scram_to_the_tls_channel(monkeypatch, sslmode):
+    # A host in the path that relays the SCRAM exchange to the real server is
+    # refused, because its TLS certificate is not the one the server signs.
+    assert _conninfo(monkeypatch, sslmode)["channel_binding"] == "require"
+
+
+def test_connect_without_tls_does_not_require_channel_binding(monkeypatch):
+    assert "channel_binding" not in _conninfo(monkeypatch, "disable")
