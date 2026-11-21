@@ -99,13 +99,15 @@ def _text(data: dict[str, Any], key: str, required: bool = True) -> str:
         raise _BadRequest(f"{key} must be a string.")
     if required and not value:
         raise _BadRequest(f"{key} is required.")
-    # JSON allows lone surrogates, which libpq and PostgreSQL cannot take.
-    # Rejecting them here, before the username allow-list, gives every
-    # username the same answer.
+    # JSON allows lone surrogates and NUL characters, which libpq and
+    # PostgreSQL cannot take. Rejecting them here, before the username
+    # allow-list, gives every username the same answer.
     try:
         value.encode("utf-8")
     except UnicodeEncodeError as e:
         raise _BadRequest(f"{key} is not valid text.") from e
+    if "\x00" in value:
+        raise _BadRequest(f"{key} is not valid text.")
     return value
 
 

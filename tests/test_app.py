@@ -158,9 +158,12 @@ def test_unlisted_username_is_401_without_connecting(calls, path, user):
 @pytest.mark.parametrize("path", ["/api/accounts", "/api/rate", "/api/expenses"])
 @pytest.mark.parametrize("user", ["expense-form", "postgres"])
 @pytest.mark.parametrize("field", ["username", "password"])
-def test_text_that_is_not_utf8_is_400_for_every_username(calls, path, user, field):
-    # A lone surrogate is valid in JSON but cannot be encoded for libpq.
-    body = {"username": user, "password": PASSWORD, field: "\ud800"}
+@pytest.mark.parametrize("value", ["\ud800", "a\u0000b"], ids=["lone-surrogate", "nul"])
+def test_text_libpq_cannot_take_is_400_for_every_username(
+    calls, path, user, field, value
+):
+    # JSON allows both values, but libpq cannot send either of them.
+    body = {"username": user, "password": PASSWORD, field: value}
     response = _client(calls).post(
         path,
         content=json.dumps(body).encode(),
@@ -169,6 +172,21 @@ def test_text_that_is_not_utf8_is_400_for_every_username(calls, path, user, fiel
     assert response.status_code == 400
     assert response.json() == {"error": f"{field} is not valid text."}
     assert calls["connections"] == []
+
+
+@pytest.mark.parametrize(
+    "value", ["\ud800", "Lunch\u0000"], ids=["lone-surrogate", "nul"]
+)
+def test_description_libpq_cannot_take_is_400_and_inserts_nothing(calls, value):
+    body = _expense_body(description=value, username="expense-form", password=PASSWORD)
+    response = _client(calls).post(
+        "/api/expenses",
+        content=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"error": "description is not valid text."}
+    assert calls["insert"] == []
 
 
 @pytest.mark.parametrize("path", ["/api/accounts", "/api/rate", "/api/expenses"])
